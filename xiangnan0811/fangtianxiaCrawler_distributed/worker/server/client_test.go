@@ -22,11 +22,11 @@ func TestCrawlService(t *testing.T) {
 		panic(err)
 	}
 	req := worker.Request{
-		Url: "https://chunfengshilirc028.fang.com/house/3210162372/housedetail.htm",
+		Url: "https://yujiangyuanah023.fang.com/house/3110121242/housedetail.htm",
 		Parser: worker.SerializedParser{
 			FuncName: config.NewHouseParser,
-			Province: "四川",
-			Url:      "https://chunfengshilirc028.fang.com/house/3210162372/housedetail.htm",
+			Province: "重庆",
+			Url:      "https://yujiangyuanah023.fang.com/house/3110121242/housedetail.htm",
 		},
 	}
 	var result worker.ParseResult

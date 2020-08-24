@@ -111,7 +111,7 @@ type CityErShouHouseListParser struct {
 }
 
 func (c *CityErShouHouseListParser) Parse(contents []byte) engine.ParseResult {
-	return ParseErShouHouse(contents, c.province, c.url)
+	return ParseCityErShouHouseList(contents, c.province, c.url)
 }
 
 func (c *CityErShouHouseListParser) Serialize() (name string, province string, url string) {

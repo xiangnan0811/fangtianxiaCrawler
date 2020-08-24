@@ -20,13 +20,14 @@ var erShouMoreUrlRe = regexp.MustCompile(`<a href="(/house-a\d+/)">`)
 
 func ParseCityNewHouseList(contents []byte, province string, detailUrl string) engine.ParseResult {
 	result := engine.ParseResult{}
+	host := strings.Split(detailUrl, ".com")[0] + ".com"
 	root, _ := htmlquery.Parse(strings.NewReader(string(contents[:])))
 	// 下一页
 	nextUrlNode := htmlquery.Find(root, "//a[@class='next']")
 	if nextUrlNode != nil {
 		nextUrlString := htmlquery.SelectAttr(nextUrlNode[0], "href")
 		if nextUrlString != "" {
-			nextUrl := detailUrl + nextUrlString
+			nextUrl := host + nextUrlString
 			result.Requests = append(result.Requests, engine.Request{
 				Url:    nextUrl,
 				Parser: NewCityNewHouseListParser(province, nextUrl),
@@ -40,7 +41,7 @@ func ParseCityNewHouseList(contents []byte, province string, detailUrl string) e
 		for _, moreUrlNode := range moreUrlNodes {
 			moreUrlString := htmlquery.SelectAttr(moreUrlNode, "href")
 			if moreUrlString != "" {
-				moreUrl := detailUrl + moreUrlString
+				moreUrl := host + moreUrlString
 				result.Requests = append(result.Requests, engine.Request{
 					Url:    moreUrl,
 					Parser: NewCityNewHouseListParser(province, moreUrl),
@@ -58,14 +59,16 @@ func ParseCityNewHouseList(contents []byte, province string, detailUrl string) e
 			urlTextNode := htmlquery.Find(li, ".//div[@class='nlcd_name']/a")
 			if urlTextNode != nil {
 				urlText := htmlquery.SelectAttr(urlTextNode[0], "href")
-				url = "https:" + urlText + "house/" + idString + "/housedetail.htm"
+				urlString1 := strings.Split(urlText, "?")[0]
+				urlString := strings.Split(urlString1, "//")[1]
+				url = "https://" + urlString + "house/" + idString + "/housedetail.htm"
 			}
 
 			if url != "" {
 				urlParam := url
 				provinceParam := province
 				result.Requests = append(result.Requests, engine.Request{
-					Url:    url,
+					Url:    urlParam,
 					Parser: NewNewHouseParser(provinceParam, urlParam),
 				})
 			}
@@ -77,10 +80,11 @@ func ParseCityNewHouseList(contents []byte, province string, detailUrl string) e
 func ParseCityErShouHouseList(contents []byte, province string, ershouurl string) engine.ParseResult {
 	result := engine.ParseResult{}
 
+	host := strings.Split(ershouurl, ".com")[0] + ".com"
 	// 下一页
 	nextUrlString := utils.ExtractString(contents, erShouNextUrlRe)
 	if nextUrlString != "" && nextUrlString != "暂无资料" {
-		nextUrl := ershouurl + nextUrlString
+		nextUrl := host + nextUrlString
 		result.Requests = append(result.Requests, engine.Request{
 			Url:    nextUrl,
 			Parser: NewCityErShouHouseListParser(province, nextUrl),
@@ -91,7 +95,7 @@ func ParseCityErShouHouseList(contents []byte, province string, ershouurl string
 	if len(moreUrlList) > 1 {
 		for _, moreUrlString := range moreUrlList {
 			if moreUrlString != "" && moreUrlString != "暂无资料" {
-				moreUrl := ershouurl + moreUrlString
+				moreUrl := host + moreUrlString
 				result.Requests = append(result.Requests, engine.Request{
 					Url:    moreUrl,
 					Parser: NewCityErShouHouseListParser(province, moreUrl),
@@ -116,7 +120,13 @@ func ParseCityErShouHouseList(contents []byte, province string, ershouurl string
 			urlTextNode := htmlquery.Find(dl, ".//h4/a")
 			if urlTextNode != nil {
 				urlText := htmlquery.SelectAttr(urlTextNode[0], "href")
-				url = ershouurl + urlText
+				urlString := strings.Split(urlText, "?")[0]
+				channel := htmlquery.SelectAttr(urlTextNode[0], "data_channel")
+				if channel != "" {
+					url = host + urlString + "?channel=" + channel
+				} else {
+					url = host + urlString
+				}
 			}
 
 			if url != "" {

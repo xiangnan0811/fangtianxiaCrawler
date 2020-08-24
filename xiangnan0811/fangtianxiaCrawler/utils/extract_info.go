@@ -9,10 +9,12 @@ import (
 func ExtractString(contents []byte, re *regexp.Regexp) string {
 	match := re.FindSubmatch(contents)
 	if len(match) >= 2 {
-		return strings.TrimSpace(string(match[1]))
-	} else {
-		return "暂无资料"
+		dataString := strings.TrimSpace(string(match[1]))
+		if dataString != "" {
+			return dataString
+		}
 	}
+	return "暂无资料"
 }
 
 func ExtractFloat64(contents []byte, re *regexp.Regexp) float64 {
