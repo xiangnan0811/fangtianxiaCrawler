@@ -48,7 +48,7 @@ func TestSave(t *testing.T) {
 
 	expected := engine.Item{
 		OriginUrl:  "https://cd.esf.fang.com/chushou/3_213015060.htm",
-		Id:         213015060,
+		Id:         "213015060",
 		Province:   "四川",
 		City:       "成都",
 		Address:    "",

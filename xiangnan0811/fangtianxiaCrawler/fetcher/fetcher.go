@@ -3,11 +3,12 @@ package fetcher
 import (
 	"bufio"
 	"fmt"
-	"github.com/xiangnan0811/fangtianxiaCrawler_distributed/config"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/xiangnan0811/fangtianxiaCrawler_distributed/config"
 
 	"golang.org/x/text/encoding/unicode"
 
@@ -28,7 +29,7 @@ func Fetch(url string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer log.Fatal(response.Body.Close())
+	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("wrong status code: %d", response.StatusCode)

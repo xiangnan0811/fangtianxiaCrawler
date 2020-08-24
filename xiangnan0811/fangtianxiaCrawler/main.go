@@ -5,6 +5,7 @@ import (
 	"github.com/xiangnan0811/fangtianxiaCrawler/fangtianxia/parser"
 	"github.com/xiangnan0811/fangtianxiaCrawler/persist"
 	"github.com/xiangnan0811/fangtianxiaCrawler/scheduler"
+	"github.com/xiangnan0811/fangtianxiaCrawler_distributed/config"
 )
 
 func main() {
@@ -13,12 +14,13 @@ func main() {
 		panic(err)
 	}
 	e := engine.ConcurrentEngine{
-		Scheduler:   &scheduler.SimpleScheduler{},
-		WorkerCount: 100,
-		ItemChan:    itemChan,
+		Scheduler:        &scheduler.SimpleScheduler{},
+		WorkerCount:      100,
+		ItemChan:         itemChan,
+		RequestProcessor: engine.Worker,
 	}
 	e.Run(engine.Request{
-		Url:        "https://www.fang.com/SoufunFamily.htm",
-		ParserFunc: parser.ParseCityList,
+		Url:    "https://www.fang.com/SoufunFamily.htm",
+		Parser: engine.NewFuncParser(parser.ParseCityList, config.ParseCityList),
 	})
 }

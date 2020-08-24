@@ -1,13 +1,14 @@
 package main
 
 import (
+	"log"
+	"testing"
+	"time"
+
 	"github.com/xiangnan0811/fangtianxiaCrawler/engine"
 	"github.com/xiangnan0811/fangtianxiaCrawler/model"
 	"github.com/xiangnan0811/fangtianxiaCrawler_distributed/config"
 	"github.com/xiangnan0811/fangtianxiaCrawler_distributed/rpcsupport"
-	"log"
-	"testing"
-	"time"
 )
 
 func TestItemSaver(t *testing.T) {
@@ -23,7 +24,7 @@ func TestItemSaver(t *testing.T) {
 	// Call Save
 	expected := engine.Item{
 		OriginUrl:  "https://cd.esf.fang.com/chushou/3_213015060.htm",
-		Id:         213015060,
+		Id:         "213015060",
 		Province:   "四川",
 		City:       "成都",
 		Address:    "",
@@ -61,7 +62,7 @@ func TestItemSaver(t *testing.T) {
 		},
 	}
 	result := ""
-	err = client.Call(config.CrawlServiceRpc, expected, &result)
+	err = client.Call(config.ItemServiceRpc, expected, &result)
 	if err != nil || result != "ok" {
 		t.Errorf("result: %s; err: %s", result, err)
 	}

@@ -12,6 +12,7 @@ import (
 )
 
 var (
+	newHouseCityRe              = regexp.MustCompile(`vcity= '(.*?)';`)
 	nameRe                      = regexp.MustCompile(`<h1><a.*?target="_blank">(.*?)</a></h1>`)
 	scoreRe                     = regexp.MustCompile(`<span style="margin-right: 5px;">([\d.]+)</span>`)
 	tagsRe                      = regexp.MustCompile(`<span class="tag">(.*?)</span>`)
@@ -31,7 +32,7 @@ var (
 	deliveryTimeRe              = regexp.MustCompile(`交房时间：</div>\s*.*?">(.*?)<`)
 	consultingPhoneRe           = regexp.MustCompile(`咨询电话：</div>\s*.*?">\s*(\d+)\s*</div>`)
 	transportationRe            = regexp.MustCompile(`<h3>交通状况</h3>\s*(.*?)\s*</div>`)
-	transportationRe2           = regexp.MustCompile(`<span>交通</span>\s*(.*?)\s*</li>`)
+	transportationRe2           = regexp.MustCompile(`<span>交通</span>((.|\n)*?)</li>`)
 	communityAreaRe             = regexp.MustCompile(`占地面积：</div>\s*.*?">([.\d]+)平方米\s*</div>`)
 	communityBuildingAreaRe     = regexp.MustCompile(`建筑面积：</div>\s*.*?">([.\d]+)平方米\s*</div>`)
 	plotRatioRe                 = regexp.MustCompile(`容.*?积<i\s*.*?率：\s*</div>\s*.*?">([.\d]+).*?\s*</div>`)
@@ -41,10 +42,10 @@ var (
 	projectBriefRe              = regexp.MustCompile(`项目简介</h3>\s*.*?">\s*((.|\n)*?)\s*</p>`)
 )
 
-func ParseNewHouse(contents []byte, province string, city string, id int, detailUrl string) engine.ParseResult {
+func ParseNewHouse(contents []byte, province string, url string) engine.ParseResult {
 	result := engine.ParseResult{}
 
-	s := strings.Split(detailUrl, "?rfss=")
+	s := strings.Split(url, "?rfss=")
 	if len(s) > 1 {
 		return result
 	}
@@ -52,18 +53,18 @@ func ParseNewHouse(contents []byte, province string, city string, id int, detail
 	if redirect := redirectRe.FindAllSubmatch(contents, -1); redirect != nil {
 		rfss := utils.ExtractAll(contents, rfssRe)
 		if lenRfss := len(rfss); lenRfss >= 2 {
-			newUrl := detailUrl + "?rfss=" + rfss[lenRfss-2]
+			newUrl := url + "?rfss=" + rfss[lenRfss-2]
 			result.Requests = append(result.Requests, engine.Request{
-				Url:        newUrl,
-				ParserFunc: ParseNewHouseFunc(province, city, id, newUrl),
+				Url:    newUrl,
+				Parser: NewNewHouseParser(province, newUrl),
 			})
 			return result
 		}
 	} else if verify := VerifyRe.FindAllSubmatch(contents, -1); verify != nil {
-		newUrl := detailUrl + "?rfss=2-0-1"
+		newUrl := url + "?rfss=2-0-1"
 		result.Requests = append(result.Requests, engine.Request{
-			Url:        newUrl,
-			ParserFunc: ParseNewHouseFunc(province, city, id, newUrl),
+			Url:    newUrl,
+			Parser: NewNewHouseParser(province, newUrl),
 		})
 		return result
 	} else {
@@ -101,7 +102,7 @@ func ParseNewHouse(contents []byte, province string, city string, id int, detail
 			newHouseProfile.ConsultingPhone = consultingPhone
 		}
 		transportation := utils.ExtractString(contents, transportationRe)
-		if transportation == "" {
+		if transportation == "" || transportation == "暂无资料" {
 			transportation = utils.ExtractString(contents, transportationRe2)
 		}
 		newHouseProfile.Transportation = transportation
@@ -113,17 +114,23 @@ func ParseNewHouse(contents []byte, province string, city string, id int, detail
 		newHouseProfile.PropertyFee = utils.ExtractFloat64(contents, propertyFeeRe)
 		newHouseProfile.ProjectBrief = utils.ExtractString(contents, projectBriefRe)
 
-		item := engine.Item{
-			OriginUrl:  detailUrl,
-			Id:         id,
-			Province:   province,
-			City:       city,
-			Index:      "newhouse",
-			Address:    utils.ExtractString(contents, addressRe),
-			GatherTime: time.Now(),
-			PayLoad:    newHouseProfile,
+		idStringList := strings.Split(strings.Split(url, "/housedetail.htm")[0], "/")
+		cityString := utils.ExtractString(contents, newHouseCityRe)
+		if len(idStringList) > 1 {
+			idString := idStringList[len(idStringList)-1]
+
+			item := engine.Item{
+				OriginUrl:  url,
+				Id:         idString,
+				Province:   province,
+				City:       cityString,
+				Index:      "newhouse",
+				Address:    utils.ExtractString(contents, addressRe),
+				GatherTime: time.Now(),
+				PayLoad:    newHouseProfile,
+			}
+			result.Items = append(result.Items, item)
 		}
-		result.Items = append(result.Items, item)
 	}
 	return result
 }

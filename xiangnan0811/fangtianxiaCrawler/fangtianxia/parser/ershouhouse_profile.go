@@ -13,6 +13,7 @@ import (
 )
 
 var (
+	erShouHouseCityRe    = regexp.MustCompile(`pageConfig.city='(.*?)';`)
 	redirectRe           = regexp.MustCompile(`(<title>跳转...</title>)`)
 	VerifyRe             = regexp.MustCompile(`<title>(访问验证.*?)</title>`)
 	rfssRe               = regexp.MustCompile(`var t3='rfss=(.*?)'`)
@@ -46,10 +47,10 @@ var (
 	servicesRe          = regexp.MustCompile(`服务介绍</div><div class="fyms_con floatl gray3">((.|\n)*?)</div>`)
 )
 
-func ParseErShouHouse(contents []byte, province string, city string, id int, detailUrl string) engine.ParseResult {
+func ParseErShouHouse(contents []byte, province string, url string) engine.ParseResult {
 	result := engine.ParseResult{}
 
-	s := strings.Split(detailUrl, "?rfss=")
+	s := strings.Split(url, "?rfss=")
 	if len(s) > 1 {
 		return result
 	}
@@ -58,10 +59,10 @@ func ParseErShouHouse(contents []byte, province string, city string, id int, det
 		rfss := utils.ExtractAll(contents, rfssRe)
 
 		if lenRfss := len(rfss); lenRfss >= 2 {
-			newUrl := detailUrl + "?rfss=" + rfss[lenRfss-2]
+			newUrl := url + "?rfss=" + rfss[lenRfss-2]
 			result.Requests = append(result.Requests, engine.Request{
-				Url:        newUrl,
-				ParserFunc: ParseErShouHouseFunc(province, city, id, newUrl),
+				Url:    newUrl,
+				Parser: NewErShouHouseParser(province, newUrl),
 			})
 			return result
 		}
@@ -106,7 +107,7 @@ func ParseErShouHouse(contents []byte, province string, city string, id int, det
 
 		erShouHouseProfile.Community = utils.ExtractString(contents, communityRe)
 		distinct := utils.ExtractString(contents, distinctRe2)
-		if distinct == "暂无资料" {
+		if distinct == "暂无资料" || distinct == "" {
 			distinct = utils.ExtractString(contents, distinctRe)
 		}
 		erShouHouseProfile.Distinct = distinct
@@ -156,17 +157,23 @@ func ParseErShouHouse(contents []byte, province string, city string, id int, det
 			}
 		}
 
-		item := engine.Item{
-			OriginUrl:  detailUrl,
-			Id:         id,
-			Province:   province,
-			City:       city,
-			Index:      "ershouhouse",
-			Address:    utils.ExtractString(contents, erShouHouseAddressRe),
-			GatherTime: time.Now(),
-			PayLoad:    erShouHouseProfile,
+		idStringList := strings.Split(strings.Split(url, ".htm")[0], "_")
+		cityString := utils.ExtractString(contents, erShouHouseCityRe)
+		if len(idStringList) == 2 {
+			idString := idStringList[1]
+
+			item := engine.Item{
+				OriginUrl:  url,
+				Id:         idString,
+				Province:   province,
+				City:       cityString,
+				Index:      "ershouhouse",
+				Address:    utils.ExtractString(contents, erShouHouseAddressRe),
+				GatherTime: time.Now(),
+				PayLoad:    erShouHouseProfile,
+			}
+			result.Items = append(result.Items, item)
 		}
-		result.Items = append(result.Items, item)
 	}
 	return result
 }

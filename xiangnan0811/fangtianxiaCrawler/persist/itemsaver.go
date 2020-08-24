@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"strconv"
 
 	"github.com/xiangnan0811/fangtianxiaCrawler/engine"
 
@@ -44,15 +43,15 @@ func Save(client *elasticsearch.Client, item engine.Item) (err error) {
 
 	req := esapi.IndexRequest{
 		Index:        item.Index,
-		DocumentType: "detail",
-		DocumentID:   strconv.Itoa(item.Id),
+		DocumentType: "",
+		DocumentID:   item.Id,
 		Body:         bytes.NewReader(jsonItem),
 	}
 	res, err := req.Do(context.Background(), client)
 	if err != nil {
 		return err
 	}
-	defer log.Fatal(res.Body.Close())
+	defer res.Body.Close()
 	fmt.Println(res.String())
 	return nil
 }

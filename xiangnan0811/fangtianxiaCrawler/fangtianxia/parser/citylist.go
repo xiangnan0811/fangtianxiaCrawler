@@ -3,6 +3,8 @@ package parser
 import (
 	"strings"
 
+	"github.com/xiangnan0811/fangtianxiaCrawler_distributed/config"
+
 	"github.com/xiangnan0811/fangtianxiaCrawler/engine"
 
 	"github.com/antchfx/htmlquery"
@@ -63,20 +65,19 @@ func ParseCityList(contents []byte) engine.ParseResult {
 			}
 
 			provinceParam := province
-			cityParam := city
 			newHouseUrlParam := newHouseUrl
 			if newHouseUrl != "" {
 				result.Requests = append(result.Requests, engine.Request{
-					Url:        newHouseUrl,
-					ParserFunc: ParseCityNewHouseListFunc(provinceParam, cityParam, newHouseUrlParam),
+					Url:    newHouseUrl,
+					Parser: NewCityNewHouseListParser(provinceParam, newHouseUrlParam),
 				})
 			}
 
 			erShouUrl := erShouHouseUrl
 			if erShouHouseUrl != "" {
 				result.Requests = append(result.Requests, engine.Request{
-					Url:        erShouHouseUrl,
-					ParserFunc: ParseCityErShouHouseListFunc(provinceParam, cityParam, erShouUrl),
+					Url:    erShouHouseUrl,
+					Parser: NewCityErShouHouseListParser(provinceParam, erShouUrl),
 				})
 			}
 		}
@@ -84,14 +85,42 @@ func ParseCityList(contents []byte) engine.ParseResult {
 	return result
 }
 
-func ParseCityNewHouseListFunc(province string, city string, url string) engine.ParserFunc {
-	return func(c []byte) engine.ParseResult {
-		return ParseCityNewHouseList(c, province, city, url)
+type CityNewHouseListParser struct {
+	province string
+	url      string
+}
+
+func (c *CityNewHouseListParser) Parse(contents []byte) engine.ParseResult {
+	return ParseCityNewHouseList(contents, c.province, c.url)
+}
+
+func (c *CityNewHouseListParser) Serialize() (name string, province string, url string) {
+	return config.CityNewHouseListParser, c.province, c.url
+}
+
+func NewCityNewHouseListParser(province string, url string) *CityNewHouseListParser {
+	return &CityNewHouseListParser{
+		province: province,
+		url:      url,
 	}
 }
 
-func ParseCityErShouHouseListFunc(province string, city string, url string) engine.ParserFunc {
-	return func(c []byte) engine.ParseResult {
-		return ParseCityErShouHouseList(c, province, city, url)
+type CityErShouHouseListParser struct {
+	province string
+	url      string
+}
+
+func (c *CityErShouHouseListParser) Parse(contents []byte) engine.ParseResult {
+	return ParseErShouHouse(contents, c.province, c.url)
+}
+
+func (c *CityErShouHouseListParser) Serialize() (name string, province string, url string) {
+	return config.CityErShouHouseListParser, c.province, c.url
+}
+
+func NewCityErShouHouseListParser(province string, url string) *CityErShouHouseListParser {
+	return &CityErShouHouseListParser{
+		province: province,
+		url:      url,
 	}
 }

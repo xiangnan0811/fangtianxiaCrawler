@@ -3,8 +3,9 @@ package parser
 import (
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
+
+	"github.com/xiangnan0811/fangtianxiaCrawler_distributed/config"
 
 	"github.com/xiangnan0811/fangtianxiaCrawler/engine"
 	"github.com/xiangnan0811/fangtianxiaCrawler/utils"
@@ -17,7 +18,7 @@ import (
 var erShouNextUrlRe = regexp.MustCompile(`<a href="(/house/i\d+/)">下一页</a>`)
 var erShouMoreUrlRe = regexp.MustCompile(`<a href="(/house-a\d+/)">`)
 
-func ParseCityNewHouseList(contents []byte, province string, city string, detailUrl string) engine.ParseResult {
+func ParseCityNewHouseList(contents []byte, province string, detailUrl string) engine.ParseResult {
 	result := engine.ParseResult{}
 	root, _ := htmlquery.Parse(strings.NewReader(string(contents[:])))
 	// 下一页
@@ -27,8 +28,8 @@ func ParseCityNewHouseList(contents []byte, province string, city string, detail
 		if nextUrlString != "" {
 			nextUrl := detailUrl + nextUrlString
 			result.Requests = append(result.Requests, engine.Request{
-				Url:        nextUrl,
-				ParserFunc: ParseCityNewHouseListFunc(province, city, nextUrl),
+				Url:    nextUrl,
+				Parser: NewCityNewHouseListParser(province, nextUrl),
 			})
 		}
 	}
@@ -41,8 +42,8 @@ func ParseCityNewHouseList(contents []byte, province string, city string, detail
 			if moreUrlString != "" {
 				moreUrl := detailUrl + moreUrlString
 				result.Requests = append(result.Requests, engine.Request{
-					Url:        moreUrl,
-					ParserFunc: ParseCityNewHouseListFunc(province, city, moreUrl),
+					Url:    moreUrl,
+					Parser: NewCityNewHouseListParser(province, moreUrl),
 				})
 			}
 		}
@@ -51,9 +52,7 @@ func ParseCityNewHouseList(contents []byte, province string, city string, detail
 	lis := htmlquery.Find(root, "//div[@id='newhouse_loupai_list']//li[@id]")
 	if len(lis) > 1 {
 		for _, li := range lis {
-			id := 0
 			idString := strings.Split(htmlquery.SelectAttr(li, "id"), "_")[1]
-			id, _ = strconv.Atoi(idString)
 
 			var url string
 			urlTextNode := htmlquery.Find(li, ".//div[@class='nlcd_name']/a")
@@ -63,13 +62,11 @@ func ParseCityNewHouseList(contents []byte, province string, city string, detail
 			}
 
 			if url != "" {
-				idParam := id
 				urlParam := url
 				provinceParam := province
-				cityParam := city
 				result.Requests = append(result.Requests, engine.Request{
-					Url:        url,
-					ParserFunc: ParseNewHouseFunc(provinceParam, cityParam, idParam, urlParam),
+					Url:    url,
+					Parser: NewNewHouseParser(provinceParam, urlParam),
 				})
 			}
 		}
@@ -77,7 +74,7 @@ func ParseCityNewHouseList(contents []byte, province string, city string, detail
 	return result
 }
 
-func ParseCityErShouHouseList(contents []byte, province string, city string, ershouurl string) engine.ParseResult {
+func ParseCityErShouHouseList(contents []byte, province string, ershouurl string) engine.ParseResult {
 	result := engine.ParseResult{}
 
 	// 下一页
@@ -85,8 +82,8 @@ func ParseCityErShouHouseList(contents []byte, province string, city string, ers
 	if nextUrlString != "" && nextUrlString != "暂无资料" {
 		nextUrl := ershouurl + nextUrlString
 		result.Requests = append(result.Requests, engine.Request{
-			Url:        nextUrl,
-			ParserFunc: ParseCityErShouHouseListFunc(province, city, nextUrl),
+			Url:    nextUrl,
+			Parser: NewCityErShouHouseListParser(province, nextUrl),
 		})
 	}
 	// 区县链接
@@ -96,8 +93,8 @@ func ParseCityErShouHouseList(contents []byte, province string, city string, ers
 			if moreUrlString != "" && moreUrlString != "暂无资料" {
 				moreUrl := ershouurl + moreUrlString
 				result.Requests = append(result.Requests, engine.Request{
-					Url:        moreUrl,
-					ParserFunc: ParseCityErShouHouseListFunc(province, city, moreUrl),
+					Url:    moreUrl,
+					Parser: NewCityErShouHouseListParser(province, moreUrl),
 				})
 			}
 		}
@@ -114,7 +111,6 @@ func ParseCityErShouHouseList(contents []byte, province string, city string, ers
 			if err != nil {
 				fmt.Println("json unmarshal error ", err)
 			}
-			id, _ := strconv.Atoi(data["houseid"].(string))
 
 			var url string
 			urlTextNode := htmlquery.Find(dl, ".//h4/a")
@@ -124,13 +120,11 @@ func ParseCityErShouHouseList(contents []byte, province string, city string, ers
 			}
 
 			if url != "" {
-				idParam := id
 				urlParam := url
 				provinceParam := province
-				cityParam := city
 				result.Requests = append(result.Requests, engine.Request{
-					Url:        url,
-					ParserFunc: ParseErShouHouseFunc(provinceParam, cityParam, idParam, urlParam),
+					Url:    url,
+					Parser: NewErShouHouseParser(provinceParam, urlParam),
 				})
 			}
 		}
@@ -138,14 +132,42 @@ func ParseCityErShouHouseList(contents []byte, province string, city string, ers
 	return result
 }
 
-func ParseErShouHouseFunc(province string, city string, id int, url string) engine.ParserFunc {
-	return func(c []byte) engine.ParseResult {
-		return ParseErShouHouse(c, province, city, id, url)
+type NewHouseParser struct {
+	province string
+	url      string
+}
+
+func (n *NewHouseParser) Parse(contents []byte) engine.ParseResult {
+	return ParseNewHouse(contents, n.province, n.url)
+}
+
+func (n *NewHouseParser) Serialize() (name string, province string, url string) {
+	return config.NewHouseParser, n.province, n.url
+}
+
+func NewNewHouseParser(province string, url string) *NewHouseParser {
+	return &NewHouseParser{
+		province: province,
+		url:      url,
 	}
 }
 
-func ParseNewHouseFunc(province string, city string, id int, url string) engine.ParserFunc {
-	return func(c []byte) engine.ParseResult {
-		return ParseNewHouse(c, province, city, id, url)
+type ErShouHouseParser struct {
+	province string
+	url      string
+}
+
+func (e *ErShouHouseParser) Parse(contents []byte) engine.ParseResult {
+	return ParseErShouHouse(contents, e.province, e.url)
+}
+
+func (e *ErShouHouseParser) Serialize() (name string, province string, url string) {
+	return config.ErShouHouseParser, e.province, e.url
+}
+
+func NewErShouHouseParser(province string, url string) *ErShouHouseParser {
+	return &ErShouHouseParser{
+		province: province,
+		url:      url,
 	}
 }

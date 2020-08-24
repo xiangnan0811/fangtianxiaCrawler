@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
+	"log"
+
 	"github.com/elastic/go-elasticsearch"
 	"github.com/xiangnan0811/fangtianxiaCrawler_distributed/config"
 	"github.com/xiangnan0811/fangtianxiaCrawler_distributed/persist"
 	"github.com/xiangnan0811/fangtianxiaCrawler_distributed/rpcsupport"
-	"log"
 )
 
 func main() {
