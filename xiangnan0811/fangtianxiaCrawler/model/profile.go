@@ -11,13 +11,13 @@ type NewHouseProfile struct {
 	PropertyType              string   // 物业类型
 	PropertyRights            []string // 产权年限
 	SaleAddress               string   // 售楼地址
-	OpenTime                  string   // 开盘时间
+	Open                      string   // 开盘时间
 	PropertyDeveloper         string   // 开发商
 	Decoration                string   // 装修情况
 	LoopPosition              string   // 环线位置
 	SaleStatus                string   // 销售状态
 	Discount                  string   // 楼盘优惠
-	DeliveryTime              string   // 交房时间
+	Delivery                  string   // 交房时间
 	ConsultingPhone           int      // 咨询电话
 	Transportation            string   // 交通状况
 	CommunityArea             float64  // 楼盘占地面积

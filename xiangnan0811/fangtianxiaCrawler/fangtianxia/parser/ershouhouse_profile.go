@@ -15,8 +15,8 @@ import (
 var (
 	erShouHouseCityRe    = regexp.MustCompile(`pageConfig.city='(.*?)';`)
 	redirectRe           = regexp.MustCompile(`(<title>跳转...</title>)`)
+	locationRe           = regexp.MustCompile(`//location.href="(.*?)";`)
 	VerifyRe             = regexp.MustCompile(`<title>(访问验证.*?)</title>`)
-	rfssRe               = regexp.MustCompile(`var t3='rfss=(.*?)'`)
 	totalPriceRe         = regexp.MustCompile(`pageConfig.price ?= ?'?(\d+.?\d+)'?;`)
 	roomRe               = regexp.MustCompile(`pageConfig.room ?= ?'?(\d+)'?;`)
 	hallRe               = regexp.MustCompile(`pageConfig.hall ?= ?'?(\d+)'?;`)
@@ -50,22 +50,24 @@ var (
 func ParseErShouHouse(contents []byte, province string, url string) engine.ParseResult {
 	result := engine.ParseResult{}
 
-	s := strings.Split(url, "?rfss=")
-	if len(s) > 1 {
-		return result
-	}
-
 	if redirect := redirectRe.FindAllSubmatch(contents, -1); redirect != nil {
-		rfss := utils.ExtractAll(contents, rfssRe)
+		locationUrl := utils.ExtractString(contents, locationRe)
 
-		if lenRfss := len(rfss); lenRfss >= 2 {
-			newUrl := url + "?rfss=" + rfss[lenRfss-2]
+		if locationUrl != "暂无资料" && locationUrl != "" {
 			result.Requests = append(result.Requests, engine.Request{
-				Url:    newUrl,
-				Parser: NewErShouHouseParser(province, newUrl),
+				Url:    locationUrl,
+				Parser: NewErShouHouseParser(province, locationUrl),
 			})
 			return result
 		}
+	} else if verify := VerifyRe.FindAllSubmatch(contents, -1); verify != nil {
+		// TODO: 验证码未处理，只是将请求发回调度器，稍后重新请求处理
+		url = strings.Split(url, "?")[0]
+		result.Requests = append(result.Requests, engine.Request{
+			Url:    url,
+			Parser: NewNewHouseParser(province, url),
+		})
+		return result
 	} else {
 		erShouHouseProfile := model.ErShouHouseProfile{}
 

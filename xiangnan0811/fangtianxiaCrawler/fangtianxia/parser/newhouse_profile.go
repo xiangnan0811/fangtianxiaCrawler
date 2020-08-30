@@ -46,25 +46,26 @@ func ParseNewHouse(contents []byte, province string, url string) engine.ParseRes
 	result := engine.ParseResult{}
 
 	s := strings.Split(url, "?rfss=")
-	if len(s) > 1 {
+	if len(s) > 2 {
 		return result
 	}
 
 	if redirect := redirectRe.FindAllSubmatch(contents, -1); redirect != nil {
-		rfss := utils.ExtractAll(contents, rfssRe)
-		if lenRfss := len(rfss); lenRfss >= 2 {
-			newUrl := url + "?rfss=" + rfss[lenRfss-2]
+		locationUrl := utils.ExtractString(contents, locationRe)
+		if locationUrl != "暂无资料" && locationUrl != "" {
+
 			result.Requests = append(result.Requests, engine.Request{
-				Url:    newUrl,
-				Parser: NewNewHouseParser(province, newUrl),
+				Url:    locationUrl,
+				Parser: NewNewHouseParser(province, locationUrl),
 			})
 			return result
 		}
 	} else if verify := VerifyRe.FindAllSubmatch(contents, -1); verify != nil {
-		newUrl := url + "?rfss=2-0-1"
+		// TODO: 验证码未处理，只是将请求发回engine稍后重新请求处理
+		url = strings.Split(url, "?")[0]
 		result.Requests = append(result.Requests, engine.Request{
-			Url:    newUrl,
-			Parser: NewNewHouseParser(province, newUrl),
+			Url:    url,
+			Parser: NewNewHouseParser(province, url),
 		})
 		return result
 	} else {
@@ -89,7 +90,7 @@ func ParseNewHouse(contents []byte, province string, url string) engine.ParseRes
 		}
 		newHouseProfile.PropertyRights = propertyRights
 		newHouseProfile.SaleAddress = utils.ExtractString(contents, saleAddressRe)
-		newHouseProfile.OpenTime = utils.ExtractString(contents, openTimeRe)
+		newHouseProfile.Open = utils.ExtractString(contents, openTimeRe)
 		newHouseProfile.PropertyDeveloper = utils.ExtractString(contents, propertyDeveloperRe)
 		newHouseProfile.Decoration = utils.ExtractString(contents, decorationRe)
 
@@ -97,7 +98,7 @@ func ParseNewHouse(contents []byte, province string, url string) engine.ParseRes
 
 		newHouseProfile.SaleStatus = utils.ExtractString(contents, saleStatusRe)
 		newHouseProfile.Discount = utils.ExtractString(contents, discountRe)
-		newHouseProfile.DeliveryTime = utils.ExtractString(contents, deliveryTimeRe)
+		newHouseProfile.Delivery = utils.ExtractString(contents, deliveryTimeRe)
 		if consultingPhone, err := strconv.Atoi(utils.ExtractString(contents, consultingPhoneRe)); err == nil {
 			newHouseProfile.ConsultingPhone = consultingPhone
 		}

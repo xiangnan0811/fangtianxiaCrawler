@@ -3,6 +3,7 @@ package parser
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/xiangnan0811/fangtianxiaCrawler_distributed/config"
@@ -16,32 +17,39 @@ import (
 )
 
 var erShouNextUrlRe = regexp.MustCompile(`<a href="(/house/i\d+/)">下一页</a>`)
-var erShouMoreUrlRe = regexp.MustCompile(`<a href="(/house-a\d+/)">`)
+var erShouMoreUrlRe = regexp.MustCompile(`<li class="">\s*<a href="(/house-a\d+/)">`)
 
 func ParseCityNewHouseList(contents []byte, province string, detailUrl string) engine.ParseResult {
 	result := engine.ParseResult{}
 	host := strings.Split(detailUrl, ".com")[0] + ".com"
+	citySimplify := strings.Split(strings.Split(host, "//")[1], ".")[0]
 	root, _ := htmlquery.Parse(strings.NewReader(string(contents[:])))
 	// 下一页
-	nextUrlNode := htmlquery.Find(root, "//a[@class='next']")
-	if nextUrlNode != nil {
-		nextUrlString := htmlquery.SelectAttr(nextUrlNode[0], "href")
-		if nextUrlString != "" {
-			nextUrl := host + nextUrlString
-			result.Requests = append(result.Requests, engine.Request{
-				Url:    nextUrl,
-				Parser: NewCityNewHouseListParser(province, nextUrl),
-			})
+	currentPageNode := htmlquery.Find(root, "//a[@class='active']")
+	if currentPageNode != nil {
+		currentPage, _ := strconv.Atoi(htmlquery.InnerText(currentPageNode[0]))
+		followingUrlNodes := htmlquery.Find(root, "//a[@class='active']/following-sibling::*")
+		if followingUrlNodes != nil {
+			nextUrlNode := followingUrlNodes[0]
+			nextUrlString := htmlquery.SelectAttr(nextUrlNode, "href")
+			if nextUrlString != "" {
+				nextUrl := host + nextUrlString + "?ctm=1." + citySimplify + ".xf_search.page." + strconv.Itoa(currentPage-1)
+				result.Requests = append(result.Requests, engine.Request{
+					Url:    nextUrl,
+					Parser: NewCityNewHouseListParser(province, nextUrl),
+				})
+			}
 		}
+
 	}
 
 	// 区县链接
-	moreUrlNodes := htmlquery.Find(root, "//li[@id='quyu_name']/a[not(@id)]")
+	moreUrlNodes := htmlquery.Find(root, "//li[@id='quyu_name']/a[not(@id) and @class]")
 	if len(moreUrlNodes) > 1 {
-		for _, moreUrlNode := range moreUrlNodes {
+		for index, moreUrlNode := range moreUrlNodes {
 			moreUrlString := htmlquery.SelectAttr(moreUrlNode, "href")
 			if moreUrlString != "" {
-				moreUrl := host + moreUrlString
+				moreUrl := host + moreUrlString + "?ctm=1." + citySimplify + ".xf_search.lpsearch_area." + strconv.Itoa(index)
 				result.Requests = append(result.Requests, engine.Request{
 					Url:    moreUrl,
 					Parser: NewCityNewHouseListParser(province, moreUrl),
@@ -90,6 +98,7 @@ func ParseCityErShouHouseList(contents []byte, province string, ershouurl string
 			Parser: NewCityErShouHouseListParser(province, nextUrl),
 		})
 	}
+
 	// 区县链接
 	moreUrlList := utils.ExtractAll(contents, erShouMoreUrlRe)
 	if len(moreUrlList) > 1 {

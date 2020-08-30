@@ -5,8 +5,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
+	"net/http/cookiejar"
 	"time"
+
+	"golang.org/x/net/publicsuffix"
 
 	"github.com/xiangnan0811/fangtianxiaCrawler_distributed/config"
 
@@ -21,10 +25,23 @@ var rateLimiter = time.Tick(config.Qps * time.Millisecond)
 
 func Fetch(url string) ([]byte, error) {
 	<-rateLimiter
-	log.Printf("Fetching url %s", url)
-	client := &http.Client{}
+
+	// Add cookie
+	options := cookiejar.Options{PublicSuffixList: publicsuffix.List}
+	jar, err := cookiejar.New(&options)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set timeout
+	client := &http.Client{
+		Timeout: 20 * time.Second,
+		Jar:     jar,
+	}
 	request, _ := http.NewRequest(http.MethodGet, url, nil)
-	request.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0")
+
+	rand.Seed(time.Now().Unix())
+	request.Header.Add("User-Agent", config.UserAgentList[rand.Intn(len(config.UserAgentList))])
 	response, err := client.Do(request)
 
 	if err != nil {
