@@ -4,6 +4,7 @@ go 1.14
 
 require (
 	github.com/antchfx/htmlquery v1.2.3
+	github.com/axgle/mahonia v0.0.0-20180208002826-3358181d7394
 	github.com/elastic/go-elasticsearch v0.0.0
 	github.com/json-iterator/go v1.1.10
 	golang.org/x/net v0.0.0-20200813134508-3edf25e44fcc

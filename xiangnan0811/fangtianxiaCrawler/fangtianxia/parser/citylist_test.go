@@ -1,13 +1,20 @@
 package parser
 
 import (
+	"fmt"
 	"io/ioutil"
 	"testing"
+
+	"github.com/axgle/mahonia"
 )
 
 func TestParseCityList(t *testing.T) {
-	contents, _ := ioutil.ReadFile("citylist_test_data.html")
-	result := ParseCityList(contents)
+	c, err := ioutil.ReadFile("citylist_test_data.html")
+	if err != nil {
+		fmt.Println(err)
+	}
+	bodyString := mahonia.NewDecoder("gbk").ConvertString(string(c))
+	result := ParseCityList([]byte(bodyString))
 
 	// verify result
 	const resultSize = 1250

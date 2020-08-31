@@ -16,7 +16,7 @@ import (
 	"github.com/antchfx/htmlquery"
 )
 
-var erShouNextUrlRe = regexp.MustCompile(`<a href="(/house/i\d+/)">下一页</a>`)
+var erShouNextUrlRe = regexp.MustCompile(`<p>\s*<a href="(/house/i\d+/)">.*?</a>\s*</p>`)
 var erShouMoreUrlRe = regexp.MustCompile(`<li class="">\s*<a href="(/house-a\d+/)">`)
 
 func ParseCityNewHouseList(contents []byte, province string, detailUrl string) engine.ParseResult {
@@ -40,11 +40,10 @@ func ParseCityNewHouseList(contents []byte, province string, detailUrl string) e
 				})
 			}
 		}
-
 	}
 
 	// 区县链接
-	moreUrlNodes := htmlquery.Find(root, "//li[@id='quyu_name']/a[not(@id) and @class]")
+	moreUrlNodes := htmlquery.Find(root, "//li[@id='quyu_name']/a[not(@id) and not(@class)]")
 	if len(moreUrlNodes) > 1 {
 		for index, moreUrlNode := range moreUrlNodes {
 			moreUrlString := htmlquery.SelectAttr(moreUrlNode, "href")

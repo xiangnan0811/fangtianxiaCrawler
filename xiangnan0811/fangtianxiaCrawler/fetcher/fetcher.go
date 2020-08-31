@@ -1,7 +1,6 @@
 package fetcher
 
 import (
-	"bufio"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -12,13 +11,9 @@ import (
 
 	"golang.org/x/net/publicsuffix"
 
+	"github.com/axgle/mahonia"
+
 	"github.com/xiangnan0811/fangtianxiaCrawler_distributed/config"
-
-	"golang.org/x/text/encoding/unicode"
-
-	"golang.org/x/net/html/charset"
-	"golang.org/x/text/encoding"
-	"golang.org/x/text/transform"
 )
 
 var rateLimiter = time.Tick(config.Qps * time.Millisecond)
@@ -35,8 +30,7 @@ func Fetch(url string) ([]byte, error) {
 
 	// Set timeout
 	client := &http.Client{
-		Timeout: 20 * time.Second,
-		Jar:     jar,
+		Jar: jar,
 	}
 	request, _ := http.NewRequest(http.MethodGet, url, nil)
 
@@ -53,19 +47,11 @@ func Fetch(url string) ([]byte, error) {
 		return nil, fmt.Errorf("wrong status code: %d", response.StatusCode)
 	}
 
-	bodyReader := bufio.NewReader(response.Body)
-	e := MyDetermineEncoding(bodyReader)
-	utf8Reader := transform.NewReader(bodyReader, e.NewDecoder())
-
-	return ioutil.ReadAll(utf8Reader)
-}
-
-func MyDetermineEncoding(r *bufio.Reader) encoding.Encoding {
-	bytes, err := r.Peek(1024)
+	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		log.Printf("Fetcher error: %v", err)
-		return unicode.UTF8
 	}
-	e, _, _ := charset.DetermineEncoding(bytes, "")
-	return e
+	bodyString := mahonia.NewDecoder("gbk").ConvertString(string(body))
+
+	return []byte(bodyString), nil
 }
